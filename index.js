@@ -1,5 +1,6 @@
 import { process } from "./env"
 import { Configuration, OpenAIApi} from 'openai'
+import * as Sentiment from 'sentiment';
 
 const setupTextarea = document.getElementById('setup-textarea') 
 const setupInputContainer = document.getElementById('setup-input-container')
@@ -12,6 +13,23 @@ const openai = new OpenAIApi(configuration)
 
 const apiKey = process.env.OPENAI_API_KEY
 
+// Define a function to analyze sentiment
+function analyzeSentiment(userMessage) {
+
+  let sentiment = new Sentiment();
+  var result = sentiment.analyze(userMessage);
+  console.log(result); 
+  // Determine the sentiment (positive, negative, or neutral) based on sentimentResult
+  // Replace this with logic specific to your library's output
+  if (result.score > 0) {
+    return 'positive';
+  } else if (result.score < 0) {
+    return 'negative';
+  } else {
+    return 'neutral';
+  }
+}
+
 document.getElementById("send-btn").addEventListener("click", () => {
     if (setupTextarea.value) {
       const userInput = setupTextarea.value
@@ -23,10 +41,21 @@ document.getElementById("send-btn").addEventListener("click", () => {
   })
   
   async function fetchBotReply(outline) {
+    const sentiment = analyzeSentiment(outline);
+
+    // Adjust the prompt based on sentiment
+    let prompt = '';
+    if (sentiment === 'positive') {
+      prompt = `Generate a short message to enthusiastically say "${outline}" sounds interesting and that you need some minutes to think about it. Mention one aspect of the sentence.`;
+    } else if (sentiment === 'negative') {
+      prompt = `Generate a message to empathetically respond to "${outline}" and express understanding. Mention one aspect of the sentence.`;
+    } else {
+      prompt = `Generate a response which is very formal to "${outline}" and mention one aspect of the sentence. Mention formally, you need a minute to gather your thoughts`;
+    }
+
     const response = await openai.createCompletion({
       model: 'text-davinci-003',
-      prompt: `Generate a short message to enthusiastically say "${outline}" sounds interesting and that you need some minutes to think about it. Mention one aspect of the sentence.
-      `,
+      prompt,
       max_tokens:60
     })
     elonText.innerText = response.data.choices[0].text.trim()
